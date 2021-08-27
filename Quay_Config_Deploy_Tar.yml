@@ -1,0 +1,44 @@
+---
+- name: Deploy Quay after Quay_Prepare.yml Playbook
+  hosts: quay
+  vars:
+    QUAY_DIR: /quay
+  vars_files:
+    - registry_login.yml
+  collections:
+    - containers.podman
+
+### Tasks for this playbook will setup a Quay Container Registry
+### This will setup and configure a non-production registry
+### based on https://access.redhat.com/documentation/en-us/red_hat_quay/3.5/html/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/getting_started_with_red_hat_quay#registry_authentication
+
+  tasks:
+
+## Prepare Config Folder
+    - name: Prepare Config Folder
+      file:
+        path: "{{ QUAY_DIR }}/config"
+        state: directory
+        mode: '0755'
+
+## Extract Configuration
+    - name: Extract Config File
+      unarchive:
+        src: files/quay-config.tar.gz  ### This file gets copied from after completing the first playbook.
+        dest: "{{ QUAY_DIR }}/config"
+
+## Create Quay Storage Directory
+    - name: Create "{{ QUAY_DIR }}/storage" Directory
+      file:
+        path: "{{ QUAY_DIR }}/storage"
+        state: directory
+        mode: '0755'
+
+## Set Directory ACLs
+    - name: Set ACL on "{{ QUAY_DIR }}/storage"
+      acl:
+        path: "{{ QUAY_DIR }}/storage"
+        entity: 1001
+        etype: user
+        permissions: -wx
+        state: present

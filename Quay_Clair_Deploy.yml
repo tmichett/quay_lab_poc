@@ -1,0 +1,106 @@
+---
+- name: Deploy Quay Claire Image Scanning Service
+  hosts: quay
+  vars:
+    QUAY_DIR: /quay
+  vars_files:
+    - registry_login.yml
+    - clair_vars.yml
+  collections:
+    - containers.podman
+
+### Tasks for this playbook will setup a Quay Container Registry
+### This will setup and configure a non-production registry
+### based on https://access.redhat.com/documentation/en-us/red_hat_quay/3.5/html/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/getting_started_with_red_hat_quay#registry_authentication
+
+  tasks:
+
+## Create Postgresql Clair Directory
+    - name: Create Postgres Clair Directory
+      file:
+        path: "{{ QUAY_DIR }}/{{ clair_directory }}"
+        state: directory
+        mode: '0755'
+
+## Set Directory ACLs for Clair Directory
+    - name: Set ACL on {{ QUAY_DIR }}/{{ clair_directory }}
+      acl:
+        path: "{{ QUAY_DIR }}/{{ clair_directory }}"
+        entity: 26
+        etype: user
+        permissions: -wx
+        state: present
+
+
+
+## Podman Collections Needed for Login
+    - name: Login to Container Registry
+      podman_login:
+        username: "{{ registry_un }}"
+        password: "{{ registry_pass }}"
+        registry: "{{ registry_url }}"
+
+## Start and Run the Postgres Clair Container
+    - name: Start the Postgres Clair Container
+      podman_container:
+        name: postgresql-clairv4
+        image: registry.redhat.io/rhel8/postgresql-10:1
+        state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/{{ clair_directory }}:/var/lib/pgsql/data:Z"
+        ports:
+          - "5433:5432"
+        env:
+          POSTGRESQL_USER: "{{ clair_pg_user }}"
+          POSTGRESQL_PASSWORD: "{{ clair_pg_pass }}"
+          POSTGRESQL_DATABASE: "{{ clair_pg_db }}"
+          POSTGRESQL_ADMIN_PASSWORD: "{{ clair_pg_admin_pass }}"
+
+
+## Command from Directions and works if Podman Ansible Collections not available
+#    - name: Launch Container with Podman
+#      shell: podman exec -it postgresql-clairv4 /bin/bash -c 'echo "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"" | psql -d clair -U postgres'
+
+
+## Insert Pause to wait for PostGres Container to Come online
+    - name: Wait for Postgres container to come online
+      pause:
+        seconds: 30
+
+## Ensure that the Postgres pg_trgm module is installed (required by Quay)
+    - name: Modify Clair Postgres container
+      shell: podman exec -it postgresql-clairv4 /bin/bash -c 'echo "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"" | psql -d clair -U postgres'
+
+## Deploy Clair Config File
+## Deploy Configuration Files
+## Prepare Config Folder
+    - name: Prepare Config Folder
+      file:
+        path: "{{ clair_config_dir }}/config"
+        state: directory
+        mode: '0755'
+
+    - name: Extract Config File
+      copy:
+        src: ./files/clair_config/config.yaml
+        dest: "{{ clair_config_dir }}/config"
+        owner: root
+        group: root
+        mode: '0777'
+
+## Start and Run the Postgres Clair Container
+    - name: Start the Clair Container
+      podman_container:
+        name: clairv4
+        image: registry.redhat.io/quay/clair-rhel8:v3.5.1
+        state: started
+        restart: yes
+        volume:
+          - "{{ clair_config_dir }}/config:/clair:Z"
+        ports:
+          - "8081:8081"
+          - "8089:8089"
+        env:
+          CLAIR_CONF: /clair/config.yaml
+          CLAIR_MODE: combo

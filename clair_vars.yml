@@ -1,0 +1,6 @@
+clair_directory: postgres-clairv4
+clair_pg_user: clairuser
+clair_pg_pass: clairpass
+clair_pg_db: clair
+clair_pg_admin_pass: adminpass
+clair_config_dir: /etc/clairv4

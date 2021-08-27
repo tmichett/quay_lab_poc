@@ -1,0 +1,4 @@
+pg_user: quayuser
+pg_pass: quaypass
+pg_db: quay
+pg_admin_pass: adminpass

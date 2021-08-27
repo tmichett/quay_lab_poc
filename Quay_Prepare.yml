@@ -1,0 +1,140 @@
+---
+- name: Installation of Packages and Preparing the System
+  hosts: quay
+  vars:
+    fw_ports:
+      - 8443/tcp  ## Quay
+      - 8080/tcp ## Quay
+      - 443/tcp  ## Quay
+      - 5432/tcp ## Postgres for Quay
+      - 6379/tcp ## Redis for Quay
+      - 5433/tcp ## Postgres for Clair
+      - 8081/tcp ## Clair V4
+    clair_v4: 8001:8080
+    postgres_clairv4: 5433:5432
+    redis: 6379:6379
+    postgres: 5432:5432
+    quay: 8080:8080
+    QUAY_DIR: /quay
+  vars_files:
+    - registry_login.yml
+    - postgres_vars.yml
+    - redis_vars.yml
+    - quay_config_vars.yml
+
+  collections:
+    - containers.podman
+
+### Tasks for this playbook will setup a Quay Container Registry
+### This will setup and configure a non-production registry
+### based on https://access.redhat.com/documentation/en-us/red_hat_quay/3.5/html/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/getting_started_with_red_hat_quay#registry_authentication
+
+  tasks:
+
+## Install the container tools packages for Podman
+    - name: Install Podman Packages
+      dnf:
+        name: '@container-tools:rhel8'
+        state: present
+
+## Prepare firewall for Quay
+    - name: Enable Firewall Ports
+      firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop: "{{ fw_ports }}"
+
+## Create Postgresql Quay Directory
+    - name: Create Postgres Quay Directory
+      file:
+        path: "{{ QUAY_DIR }}/postgres-quay"
+        state: directory
+        mode: '0755'
+
+## Set Directory ACLs
+    - name: Set ACL on {{ QUAY_DIR }}/postgres-quay
+      acl:
+        path: "{{ QUAY_DIR }}/postgres-quay"
+        entity: 26
+        etype: user
+        permissions: -wx
+        state: present
+
+
+## Podman Collections Needed for Login
+    - name: Login to Container Registry
+      podman_login:
+        username: "{{ registry_un }}"
+        password: "{{ registry_pass }}"
+        registry: "{{ registry_url }}"
+
+## Start and Run the Postgres Container
+    - name: Start the Postgres Container
+      podman_container:
+        name: postgresql-quay
+        image: registry.redhat.io/rhel8/postgresql-10:1
+        state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/postgres-quay:/var/lib/pgsql/data:Z"
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRESQL_USER: "{{ pg_user }}"
+          POSTGRESQL_PASSWORD: "{{ pg_pass }}"
+          POSTGRESQL_DATABASE: "{{ pg_db }}"
+          POSTGRESQL_ADMIN_PASSWORD: "{{ pg_admin_pass }}"
+
+
+## Command from Directions and works if Podman Ansible Collections not available
+#    - name: Launch Container with Podman
+#      shell: podman run -d --rm --name postgresql-quay -e POSTGRESQL_USER={{ pg_user }} -e POSTGRESQL_PASSWORD={{ pg_pass }} -e POSTGRESQL_DATABASE={{ pg_db }} -e POSTGRESQL_ADMIN_PASSWORD={{ pg_admin_pass }} -p 5432:5432 -v {{ QUAY_DIR }}/postgres-quay:/var/lib/pgsql/data:Z registry.redhat.io/rhel8/postgresql-10:1
+
+
+## Insert Pause to wait for PostGres Container to Come online
+    - name: Wait for Postgres container to come online
+      pause:
+        seconds: 30
+
+
+
+## Ensure that the Postgres pg_trgm module is installed (required by Quay)
+    - name: Modify Postgres container
+      shell: podman exec -it postgresql-quay /bin/bash -c 'echo "CREATE EXTENSION IF NOT EXISTS pg_trgm" | psql -d quay -U postgres'
+
+## Start and Run the Redis Container
+    - name: Start the Redis Container
+      podman_container:
+        name: redis
+        image: registry.redhat.io/rhel8/redis-5:1
+        state: started
+        restart: yes
+        ports:
+          - "6379:6379"
+        env:
+          REDIS_PASSWORD: "{{ redis_pass }}"
+
+## Start and Run the Quay Config Container
+    - name: Start the Quay Config Container
+      podman_container:
+        name: quay_config
+        image: registry.redhat.io/quay/quay-rhel8:v3.5.1
+        state: started
+        restart: yes
+        ports:
+          - "8080:8080"
+        command: config {{ quay_config_pass }}
+
+## Insert Pause and prompt for user to configure the Quay Container
+## Pauses until complete
+    - name: Open the Quay Config Container Site
+      pause:
+        prompt: "Go to the Quay Configuration container website and enter the appropriate configuration values. For help, look at https://github.com/tmichett/quay_lab/References/Quay-3.5_Deployment.pdf. Login with the credentials provided which are UN: quayconfig and PW: {{ quay_config_pass }}. Press 'Enter' when you've completed the configuration and downloaded the file. The file should be placed in the files directory for this playbook."
+
+## Stop Quay Config Container
+    - name: Stop and Remove the Quay Config Container
+      podman_container:
+        name: quay_config
+        state: absent       ### Can use "stopped" to just stop the container

@@ -1,0 +1,34 @@
+---
+- name: Deploy Quay Mirror
+  hosts: quay
+  vars:
+    QUAY_DIR: /quay
+  vars_files:
+    - registry_login.yml
+  collections:
+    - containers.podman
+
+### Tasks for this playbook will setup a Quay Container Registry
+### This will setup and configure a non-production registry
+### based on https://access.redhat.com/documentation/en-us/red_hat_quay/3.5/html/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/getting_started_with_red_hat_quay#registry_authentication
+
+  tasks:
+
+
+## Podman Collections Needed for Login
+    - name: Login to Container Registry
+      podman_login:
+        username: "{{ registry_un }}"
+        password: "{{ registry_pass }}"
+        registry: "{{ registry_url }}"
+
+## Start and Run the Quay Container
+    - name: Start the Quay Container
+      podman_container:
+        name: mirroring-worker
+        image: registry.redhat.io/quay/quay-rhel8:v3.5.1
+        state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/config:/conf/stack:Z"
+        command: repomirror 
