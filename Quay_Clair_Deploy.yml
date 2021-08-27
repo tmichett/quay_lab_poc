@@ -75,13 +75,13 @@
 ## Deploy Clair Config File
 ## Deploy Configuration Files
 ## Prepare Config Folder
-    - name: Prepare Config Folder
+    - name: Prepare Clair Config Folder
       file:
         path: "{{ clair_config_dir }}/config"
         state: directory
         mode: '0755'
 
-    - name: Extract Config File
+    - name: Copy Clair Config File
       copy:
         src: ./files/clair_config/config.yaml
         dest: "{{ clair_config_dir }}/config"

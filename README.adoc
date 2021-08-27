@@ -162,7 +162,7 @@ The playbook will pause to allow you to update or create a new Quay configuratio
 .Deploy Quay Configuration Files
 [source,bash]
 ----
-travis@Traviss-MacBook-Pro quay_lab % ansible-playbook Quay_Config_Deploy_Files.yml
+travis@Traviss-MacBook-Pro quay_lab_poc % ansible-playbook Quay_Config_Deploy_Files.yml
 
 PLAY [Deploy Quay after Quay_Prepare.yml Playbook] ***********************************
 
@@ -170,9 +170,9 @@ TASK [Gathering Facts] *********************************************************
 ok: [quay.local]
 
 TASK [Prepare Config Folder] *********************************************************
-ok: [quay.local]
+changed: [quay.local]
 
-TASK [Extract Config File] ***********************************************************
+TASK [Deploy Config File] ************************************************************
 changed: [quay.local]
 
 TASK [Create "/quay/storage" Directory] **********************************************
@@ -182,7 +182,7 @@ TASK [Set ACL on "/quay/storage"] **********************************************
 changed: [quay.local]
 
 PLAY RECAP ***************************************************************************
-quay.local                 : ok=5    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+quay.local                 : ok=5    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ----
 +
 .Direct Config File Manipulation
@@ -205,11 +205,11 @@ ok: [quay.local]
 
 ... output omitted ...
 
-TASK [Modify Clair Postgres container] ***********************************************
+TASK [Start the Clair Container] *****************************************************
 changed: [quay.local]
 
 PLAY RECAP ***************************************************************************
-quay.local                 : ok=7    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored
+quay.local                 : ok=10   changed=8    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ----
 +
 .Wait for about three (3) minutes before Clair is up
@@ -225,6 +225,7 @@ Sometimes it takes a while for Clair to come up. If Clair isn't fully up and ope
 +------------------------+---------------------------------------------------------+--------+
 ----
 
+If Quay container fails on deployment, it is possible it is taking longer for ClairV4 container to come up and be operational. I've seen it take as long as 15 minutes and not sure why!
 ====
 
 . Deploy the QUAY Container
