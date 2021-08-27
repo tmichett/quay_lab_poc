@@ -78,8 +78,30 @@ Another important requirement before beginning the lab and deployment is to ensu
 .Cloning *github repo* via SSH
 [source,bash]
 ----
-git clone git@github.com:tmichett/quay_lab.git
+git clone git@github.com:tmichett/quay_lab_poc.git
 ----
+
+. Copy the *registry_login.yml_example* to *registry_login.yml* and update with your login credentials.
++
+.Create a local variable file
+[source,bash]
+----
+cp registry_login.yml_example registry_login.yml
+----
++
+.File is Copied and in *.gitignore* to prevent credential leaks
+[IMPORTANT]
+====
+.registry_login.yml
+[source,bash]
+----
+registry_un: UN_Goes_Here<1>
+registry_pass: Password_Goes_Here<2>
+registry_url: registry.redhat.io
+----
+<1> Replace with your *registry.redhat.io* Username
+<2> Replace with your *registry.redhat.io* Password
+====
 
 
 ==== Quay Deployment Preparation
