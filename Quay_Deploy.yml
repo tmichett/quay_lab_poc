@@ -25,7 +25,7 @@
     - name: Start the Quay Container
       podman_container:
         name: quay
-        image: registry.redhat.io/quay/quay-rhel8:v3.5.1
+        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
         state: started
         restart: yes
         ports:
