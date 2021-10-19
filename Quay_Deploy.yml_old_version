@@ -1,5 +1,5 @@
 ---
-- name: Deploy Quay Mirror
+- name: Deploy Quay after Quay_Prepare.yml Playbook
   hosts: quay
   vars:
     QUAY_DIR: /quay
@@ -14,7 +14,6 @@
 
   tasks:
 
-
 ## Podman Collections Needed for Login
     - name: Login to Container Registry
       podman_login:
@@ -25,10 +24,12 @@
 ## Start and Run the Quay Container
     - name: Start the Quay Container
       podman_container:
-        name: mirroring-worker
-        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
+        name: quay
+        image: registry.redhat.io/quay/quay-rhel8:v3.5.1
         state: started
         restart: yes
+        ports:
+          - "8080:8080"
         volume:
           - "{{ QUAY_DIR }}/config:/conf/stack:Z"
-        command: repomirror 
+          - "{{ QUAY_DIR }}/storage:/datastorage:Z"

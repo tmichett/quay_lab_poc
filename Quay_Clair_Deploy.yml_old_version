@@ -93,7 +93,7 @@
     - name: Start the Clair Container
       podman_container:
         name: clairv4
-        image: registry.redhat.io/quay/clair-rhel8:v3.6.0-70
+        image: registry.redhat.io/quay/clair-rhel8:v3.5.1
         state: started
         restart: yes
         volume:
