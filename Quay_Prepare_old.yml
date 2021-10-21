@@ -120,7 +120,7 @@
     - name: Start the Quay Config Container
       podman_container:
         name: quay_config
-        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
+        image: registry.redhat.io/quay/quay-rhel8:v3.5.1
         state: started
         restart: yes
         ports:
