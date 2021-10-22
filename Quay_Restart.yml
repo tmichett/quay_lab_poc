@@ -2,9 +2,25 @@
 - name: Deploy Quay after Quay_Prepare.yml Playbook
   hosts: quay
   vars:
+    fw_ports:
+      - 8443/tcp  ## Quay
+      - 8080/tcp ## Quay
+      - 443/tcp  ## Quay
+      - 5432/tcp ## Postgres for Quay
+      - 6379/tcp ## Redis for Quay
+      - 5433/tcp ## Postgres for Clair
+      - 8081/tcp ## Clair V4
+    clair_v4: 8001:8080
+    postgres_clairv4: 5433:5432
+    redis: 6379:6379
+    postgres: 5432:5432
+    quay: 8080:8080
     QUAY_DIR: /quay
   vars_files:
     - registry_login.yml
+    - postgres_vars.yml
+    - redis_vars.yml
+    - quay_config_vars.yml
   collections:
     - containers.podman
 
