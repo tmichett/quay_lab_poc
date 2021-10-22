@@ -1,0 +1,59 @@
+---
+- name: Deploy Quay after Quay_Prepare.yml Playbook
+  hosts: quay
+  vars:
+    QUAY_DIR: /quay
+  vars_files:
+    - registry_login.yml
+  collections:
+    - containers.podman
+
+### Tasks for this playbook will setup a Quay Container Registry
+### This will setup and configure a non-production registry
+### based on https://access.redhat.com/documentation/en-us/red_hat_quay/3.5/html/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/getting_started_with_red_hat_quay#registry_authentication
+
+  tasks:
+
+
+## Start and Run the Quay Container
+## This is done after the configuration of QUAY for config container or config file updates
+    - name: Start the Postrgres Container
+      podman_container:
+        name: postgresql-quay
+        state: started
+
+    - name: Start the Redis Container
+      podman_container:
+        name: redis
+        state: started
+
+    - name: Start the Postrgres-Clair Container
+      podman_container:
+        name: postgresql-clairv4
+        state: started
+
+## Insert Pause to wait for PostGres Container to Come online
+    - name: Wait for Database containers to come online
+      pause:
+        seconds: 30
+
+    - name: Start the Clair Container
+      podman_container:
+        name: clairv4
+        state: started
+
+## Insert Pause to wait for PostGres Container to Come online
+    - name: Wait for Clair containers to come online
+      pause:
+        seconds: 15
+
+
+    - name: Start the Quay Container
+      podman_container:
+        name: quay
+        state: started
+
+    - name: Start the Quay Mirror Container
+      podman_container:
+        name: mirroring-worker
+        state: started
