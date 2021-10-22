@@ -20,17 +20,45 @@
     - name: Start the Postrgres Container
       podman_container:
         name: postgresql-quay
+        image: registry.redhat.io/rhel8/postgresql-10:1
         state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/postgres-quay:/var/lib/pgsql/data:Z"
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRESQL_USER: "{{ pg_user }}"
+          POSTGRESQL_PASSWORD: "{{ pg_pass }}"
+          POSTGRESQL_DATABASE: "{{ pg_db }}"
+          POSTGRESQL_ADMIN_PASSWORD: "{{ pg_admin_pass }}"
 
     - name: Start the Redis Container
       podman_container:
         name: redis
+        image: registry.redhat.io/rhel8/redis-5:1
         state: started
+        restart: yes
+        ports:
+          - "6379:6379"
+        env:
+          REDIS_PASSWORD: "{{ redis_pass }}"
 
     - name: Start the Postrgres-Clair Container
       podman_container:
         name: postgresql-clairv4
+        image: registry.redhat.io/rhel8/postgresql-10:1
         state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/{{ clair_directory }}:/var/lib/pgsql/data:Z"
+        ports:
+          - "5433:5432"
+        env:
+          POSTGRESQL_USER: "{{ clair_pg_user }}"
+          POSTGRESQL_PASSWORD: "{{ clair_pg_pass }}"
+          POSTGRESQL_DATABASE: "{{ clair_pg_db }}"
+          POSTGRESQL_ADMIN_PASSWORD: "{{ clair_pg_admin_pass }}"
 
 ## Insert Pause to wait for PostGres Container to Come online
     - name: Wait for Database containers to come online
@@ -40,7 +68,17 @@
     - name: Start the Clair Container
       podman_container:
         name: clairv4
+        image: registry.redhat.io/quay/clair-rhel8:v3.6.0-70
         state: started
+        restart: yes
+        volume:
+          - "{{ clair_config_dir }}/config:/clair:Z"
+        ports:
+          - "8081:8081"
+          - "8089:8089"
+        env:
+          CLAIR_CONF: /clair/config.yaml
+          CLAIR_MODE: combo
 
 ## Insert Pause to wait for PostGres Container to Come online
     - name: Wait for Clair containers to come online
@@ -51,9 +89,21 @@
     - name: Start the Quay Container
       podman_container:
         name: quay
+        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
         state: started
+        restart: yes
+        ports:
+          - "80:8080"
+        volume:
+          - "{{ QUAY_DIR }}/config:/conf/stack:Z"
+          - "{{ QUAY_DIR }}/storage:/datastorage:Z"
 
     - name: Start the Quay Mirror Container
       podman_container:
         name: mirroring-worker
+        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
         state: started
+        restart: yes
+        volume:
+          - "{{ QUAY_DIR }}/config:/conf/stack:Z"
+        command: repomirror
