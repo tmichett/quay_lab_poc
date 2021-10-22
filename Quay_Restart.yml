@@ -21,6 +21,7 @@
     - postgres_vars.yml
     - redis_vars.yml
     - quay_config_vars.yml
+    - clair_vars.yml  
   collections:
     - containers.podman
 
