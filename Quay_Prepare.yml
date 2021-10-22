@@ -6,6 +6,7 @@
       - 8443/tcp  ## Quay
       - 8080/tcp ## Quay
       - 443/tcp  ## Quay
+      - 80/tcp ## Quay
       - 5432/tcp ## Postgres for Quay
       - 6379/tcp ## Redis for Quay
       - 5433/tcp ## Postgres for Clair
