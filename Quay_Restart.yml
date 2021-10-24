@@ -21,7 +21,7 @@
     - postgres_vars.yml
     - redis_vars.yml
     - quay_config_vars.yml
-    - clair_vars.yml  
+    - clair_vars.yml
   collections:
     - containers.podman
 
@@ -124,3 +124,15 @@
         volume:
           - "{{ QUAY_DIR }}/config:/conf/stack:Z"
         command: repomirror
+
+    - name: Restart the Quay Container as Configuration File Might not have been read
+      podman_container:
+        name: quay
+        image: registry.redhat.io/quay/quay-rhel8:v3.6.0-62
+        state: started
+        restart: yes
+        ports:
+          - "80:8080"
+        volume:
+          - "{{ QUAY_DIR }}/config:/conf/stack:Z"
+          - "{{ QUAY_DIR }}/storage:/datastorage:Z"
